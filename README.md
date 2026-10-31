@@ -60,7 +60,7 @@ The config holds secrets. The tool refuses to read a key, secret or password fro
 - Triggers are added with `MYMPD_API_TRIGGER_SAVE`: `mpd_player` (now playing), `mympd_scrobble` (scrobble) and `mympd_feedback` (likes become Last.fm "loves").
 - Signing in runs the `lastfm` script's own `fetchkey` step with `MYMPD_API_SCRIPT_EXECUTE`, so the password goes to Last.fm the same way as from myMPD's dialog. The tool then waits for the new session key to appear.
 
-The `lastfm` script currently stops with "No Last.fm Session Key set" before it reaches its own sign-in step when no session key exists. The tool works around this by setting a placeholder session key first, which the sign-in then replaces.
+The `lastfm` script currently stops with "No Last.fm Session Key set" before it reaches its own sign-in step when no session key exists ([jcorporation/mympd-scripts#48](https://github.com/jcorporation/mympd-scripts/issues/48)). The tool works around this by setting a placeholder session key first, which the sign-in then replaces.
 
 ## Contributing
 

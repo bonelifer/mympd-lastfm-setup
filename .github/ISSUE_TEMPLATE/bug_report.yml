@@ -1,0 +1,49 @@
+name: Bug report
+description: Something in setup-lastfm.py doesn't work as described
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please remove your API key, secret, session key and password from anything you paste.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you ran, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command and output
+      description: The exact command and its full output.
+      render: text
+    validations:
+      required: true
+  - type: input
+    id: mympd-version
+    attributes:
+      label: myMPD version
+      placeholder: "26.1.2"
+    validations:
+      required: true
+  - type: input
+    id: script-version
+    attributes:
+      label: lastfm script version
+      description: Shown in myMPD under Scripts, or the "version" in the first line of lastfm.lua.
+      placeholder: "7"
+  - type: input
+    id: python-version
+    attributes:
+      label: Python version
+      placeholder: "3.12"
+    validations:
+      required: true
+  - type: textarea
+    id: mympd-log
+    attributes:
+      label: myMPD log
+      description: Lines from myMPD's log around the problem, if any.
+      render: text

@@ -1,0 +1,4 @@
+# Live config holds Last.fm secrets; only the .example is tracked
+setup-lastfm.cfg
+.setup-lastfm.cfg.*
+__pycache__/

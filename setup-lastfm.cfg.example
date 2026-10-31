@@ -1,0 +1,32 @@
+# Settings for setup-lastfm.py. Copy to setup-lastfm.cfg next to the
+# script and run: chmod 600 setup-lastfm.cfg
+# Or let `setup-lastfm.py --export` create it from a working myMPD.
+
+[mympd]
+# myMPD address the script talks to.
+url = http://localhost:8081
+
+# myMPD partition the triggers belong to.
+partition = default
+
+[lastfm]
+# API key from https://www.last.fm/api (API account).
+api_key =
+
+# Shared secret shown with the API key.
+secret =
+
+# Session key; --login fills it in. Last.fm session keys do not expire, so
+# saving it here skips signing in on later setups. Leave empty to sign in
+# again.
+session_key =
+
+# Last.fm username for --login. Optional; asked for when empty.
+username =
+
+# Last.fm password for --login. Optional; asked for (without echo) when
+# empty. The tool refuses to read it unless only you can read this file.
+password =
+
+# Comma separated genres that should not be scrobbled. Optional.
+scrobble_genre_blacklist =

@@ -37,8 +37,11 @@ Play a song to check: Last.fm shows it as "now playing" right away and scrobbles
 | `-s`, `--setup` | Writes the variables from the config into myMPD and adds any missing triggers. Existing triggers are kept, so it is safe to run again. Without a saved session key it then signs in, as `--login` does. |
 | `-l`, `--login` | Gets a new session key by running the script's sign-in step in myMPD, then saves the key in myMPD and in the config. |
 | `-e`, `--export` | Copies the Last.fm variables from a working myMPD into the config, so you can restore them later with `--setup`. |
+| `-g`, `--genres` | Shows the genres that are not scrobbled. |
+| `-a`, `--add-genre GENRE...` | Stops scrobbling songs of these genres. Saves the change in myMPD and in the config. |
+| `-r`, `--remove-genre GENRE...` | Scrobbles songs of these genres again. |
 | `-c`, `--config FILE` | Uses another config file (default: `setup-lastfm.cfg` next to the script). |
-| `-n`, `--dry-run` | Shows what `--setup` or `--export` would change without changing anything. |
+| `-n`, `--dry-run` | Shows what `--setup`, `--export`, `--add-genre` or `--remove-genre` would change without changing anything. |
 
 Run `./setup-lastfm.py` with no options for the full help.
 
@@ -50,7 +53,7 @@ Run `./setup-lastfm.py` with no options for the full help.
 - `[lastfm] api_key` and `secret`: from your Last.fm API account. Required.
 - `[lastfm] session_key`: filled in by `--login`. Last.fm session keys do not expire, so once it is saved you never need to sign in again.
 - `[lastfm] username` and `password`: optional. Anything left empty is asked for when signing in.
-- `[lastfm] scrobble_genre_blacklist`: optional genres not to scrobble.
+- `[lastfm] scrobble_genre_blacklist`: comma separated genres not to scrobble, `Christmas,Holidays,Podcast` by default. Case does not matter, but a song's genre has to match one of them exactly. Change it with `--add-genre` and `--remove-genre`.
 
 The config holds secrets. The tool refuses to read a key, secret or password from a config that other users can read; keep it at `chmod 600`.
 

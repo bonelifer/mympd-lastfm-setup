@@ -18,6 +18,10 @@ Modes:
             key and saves it into the config.
   --export  read the variables from a working myMPD and save them into the
             config (created from setup-lastfm.cfg.example, mode 600).
+  --genres  show the genres that are not scrobbled.
+  --add-genre / --remove-genre
+            change that genre blacklist in myMPD and in the config, so a
+            later --setup keeps it.
 
 The lastfm script itself must be imported from the myMPD UI (Scripts ->
 Import), which checks its signature; --setup stops and says so if it is
@@ -101,6 +105,16 @@ def parse_args() -> argparse.Namespace:
     mode.add_argument(
         "-e", "--export", action="store_true",
         help="save the Last.fm variables from myMPD into the config file")
+    mode.add_argument(
+        "-g", "--genres", action="store_true",
+        help="show the genres that are not scrobbled")
+    mode.add_argument(
+        "-a", "--add-genre", nargs="+", metavar="GENRE",
+        help="stop scrobbling songs of these genres (saved in myMPD and "
+             "the config; case does not matter)")
+    mode.add_argument(
+        "-r", "--remove-genre", nargs="+", metavar="GENRE",
+        help="scrobble songs of these genres again")
     parser.add_argument(
         "-c", "--config", type=Path, default=DEFAULT_CONFIG, metavar="FILE",
         help=f"config file (default: {DEFAULT_CONFIG})")
@@ -111,10 +125,17 @@ def parse_args() -> argparse.Namespace:
         parser.print_help(sys.stderr)
         sys.exit(2)
     args = parser.parse_args()
-    if not (args.setup or args.login or args.export):
-        parser.error("choose a mode: --setup, --login or --export")
-    if args.login and args.dry_run:
-        parser.error("--dry-run does not apply to --login")
+    if not (args.setup or args.login or args.export or args.genres
+            or args.add_genre or args.remove_genre):
+        parser.error("choose a mode: --setup, --login, --export, --genres, "
+                     "--add-genre or --remove-genre")
+    if (args.login or args.genres) and args.dry_run:
+        parser.error("--dry-run does not apply to --login or --genres")
+    for genre in args.add_genre or args.remove_genre or ():
+        # The lastfm script splits the blacklist on commas
+        if "," in genre or not genre.strip():
+            parser.error(f"genre must be non-empty and without commas: "
+                         f"{genre!r}")
     return args
 
 
@@ -369,6 +390,65 @@ def export(mympd: Mympd, path: Path, dry_run: bool) -> int:
     return 0
 
 
+def split_genres(text: str) -> list[str]:
+    """Split a comma separated genre list, dropping blanks and repeats.
+
+    Repeats are matched without regard to case, like the lastfm script
+    does; the first spelling is kept.
+    """
+    result: list[str] = []
+    for genre in text.split(","):
+        genre = genre.strip()
+        if genre and genre.lower() not in (kept.lower() for kept in result):
+            result.append(genre)
+    return result
+
+
+def genres(mympd: Mympd, path: Path, add: list[str] | None,
+           remove: list[str] | None, dry_run: bool) -> int:
+    """Show or change the scrobble genre blacklist.
+
+    Starts from myMPD's current value. Changes are written to myMPD and,
+    when the config file exists, to its [lastfm] scrobble_genre_blacklist.
+    """
+    variable = VARIABLES["scrobble_genre_blacklist"]
+    current = split_genres(mympd.variables().get(variable, ""))
+    if add is None and remove is None:
+        print(", ".join(current) if current else
+              "No genres blocked; every genre is scrobbled.")
+        return 0
+
+    updated = list(current)
+    for genre in split_genres(",".join(add or ())):
+        if genre.lower() in (kept.lower() for kept in updated):
+            print(f"{genre!r} is already blocked")
+        else:
+            updated.append(genre)
+    for genre in split_genres(",".join(remove or ())):
+        matches = [kept for kept in updated if kept.lower() == genre.lower()]
+        if not matches:
+            print(f"{genre!r} is not blocked")
+        for kept in matches:
+            updated.remove(kept)
+    if updated == current:
+        print("Nothing to change.")
+        return 0
+
+    value = ",".join(updated)
+    prefix = "would set" if dry_run else "set"
+    print(f"{prefix} variable {variable} = {value or '(empty)'}")
+    if dry_run:
+        return 0
+    mympd.call("MYMPD_API_SCRIPT_VAR_SET", {"key": variable, "value": value})
+    if path.exists():
+        write_config(path, {"scrobble_genre_blacklist": value})
+        print(f"Saved in {path}")
+    else:
+        print(f"{path} does not exist; only myMPD was changed. Run --export "
+              f"to save the setup.")
+    return 0
+
+
 def main() -> int:
     """Run the chosen mode."""
     args = parse_args()
@@ -384,6 +464,9 @@ def main() -> int:
             return setup(mympd, config, args.config, partition, args.dry_run)
         if args.login:
             return login(mympd, config, args.config)
+        if args.genres or args.add_genre or args.remove_genre:
+            return genres(mympd, args.config, args.add_genre,
+                          args.remove_genre, args.dry_run)
         return export(mympd, args.config, args.dry_run)
     except MympdError as error:
         print(f"myMPD error: {error}", file=sys.stderr)

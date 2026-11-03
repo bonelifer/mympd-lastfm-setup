@@ -28,5 +28,6 @@ username =
 # empty. The tool refuses to read it unless only you can read this file.
 password =
 
-# Comma separated genres that should not be scrobbled. Optional.
-scrobble_genre_blacklist =
+# Comma separated genres that should not be scrobbled (case does not
+# matter). Optional; --add-genre and --remove-genre change it.
+scrobble_genre_blacklist = Christmas,Holidays,Podcast

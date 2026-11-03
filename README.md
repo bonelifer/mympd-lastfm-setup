@@ -53,7 +53,7 @@ Run `./setup-lastfm.py` with no options for the full help.
 - `[lastfm] api_key` and `secret`: from your Last.fm API account. Required.
 - `[lastfm] session_key`: filled in by `--login`. Last.fm session keys do not expire, so once it is saved you never need to sign in again.
 - `[lastfm] username` and `password`: optional. Anything left empty is asked for when signing in.
-- `[lastfm] scrobble_genre_blacklist`: comma separated genres not to scrobble, `Christmas,Holidays,Podcast` by default. Case does not matter, but a song's genre has to match one of them exactly. Change it with `--add-genre` and `--remove-genre`.
+- `[lastfm] scrobble_genre_blacklist`: comma separated genres not to scrobble, `Christmas,Holiday,Holidays,Podcast` by default. Case does not matter, but a song's genre has to match one of them exactly. Change it with `--add-genre` and `--remove-genre`.
 
 The config holds secrets. The tool refuses to read a key, secret or password from a config that other users can read; keep it at `chmod 600`.
 

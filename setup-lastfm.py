@@ -69,8 +69,9 @@ TRIGGERS = (
     ("lastfm scrobble", -1, "scrobble"),   # mympd_scrobble
     ("lastfm feedback", -6, "feedback"),   # mympd_feedback
 )
-# The lastfm script refuses to run, even for its own "key" step, while the
-# session key is empty, so an empty key is replaced by this placeholder.
+# lastfm script version 7 and older refuses to run, even for its own "key"
+# step, while the session key is empty, so an empty key is replaced by this
+# placeholder. Version 8 fixed that (mympd-scripts#48); it is harmless there.
 SESSION_KEY_PLACEHOLDER = "x"
 # myMPD runs scripts in the background; how long to wait for the new key
 LOGIN_WAIT_SECONDS = 30
@@ -295,7 +296,7 @@ def login(mympd: Mympd, config: configparser.ConfigParser,
     session_variable = VARIABLES["session_key"]
     before = current.get(session_variable, "")
     if not before:
-        # The script stops early while the session key is empty
+        # Script version 7 and older stop early while the key is empty
         mympd.call("MYMPD_API_SCRIPT_VAR_SET",
                    {"key": session_variable,
                     "value": SESSION_KEY_PLACEHOLDER})

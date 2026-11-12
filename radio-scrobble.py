@@ -30,6 +30,7 @@ class Song:
     album: str = ""
     duration: float = 0
     provider_id: str = ""
+    complete_track_only: bool = False
 
 
 @dataclass
@@ -45,6 +46,8 @@ class Listening:
 
     def eligible(self, finished: bool = False) -> bool:
         """Apply Last.fm timing rules using a known or observed duration."""
+        if self.song.complete_track_only:
+            return finished and self.observed_boundary and self.listened > 30
         duration = self.song.duration
         if duration:
             return duration > 30 and self.listened >= min(duration / 2, 240)
@@ -114,14 +117,34 @@ def iheart_song(raw: str) -> Song | None:
                 seconds(fields.get("length", "")))
 
 
-def identify(uri: str, raw: str, cache: dict) -> Song | None:
+def tunein_song(raw: str, station_name: str) -> Song | None:
+    """Parse plain titles only for a station explicitly opted in by the owner."""
+    if re.search(r'(?:^|\s)[\w-]+\s*=\s*"', raw):
+        return None
+    parts = re.split(r"\s+[-–—]\s+", raw.strip(), maxsplit=1)
+    if len(parts) != 2:
+        return None
+    artist, title = (part.strip() for part in parts)
+    nonmusic = {"ad", "ad content", "advertisement", "commercial", "commercial break",
+                "channel content", "unknown", "null", "station id", "news"}
+    excluded = nonmusic | {normalize(station_name)}
+    if not artist or not title or any(normalize(part) in excluded for part in parts):
+        return None
+    return Song(artist, title, complete_track_only=True)
+
+
+def identify(uri: str, raw: str, cache: dict,
+             tunein_stations: frozenset[str] = frozenset(),
+             station_name: str = "") -> Song | None:
     """Resolve a song only when provider metadata corroborates it."""
     parsed = urlsplit(uri)
     flags = parse_qs(parsed.fragment)
     if "mympd-iheart" in flags or "mympd-tunein" in flags:
-        # Some TuneIn relays carry the same structured metadata. Plain
-        # station/title strings cannot reliably distinguish music from talk.
-        return iheart_song(raw)
+        structured = iheart_song(raw)
+        station = flags.get("mympd-tunein", [""])[0]
+        if structured is None and station in tunein_stations:
+            return tunein_song(raw, flags.get("name", [station_name])[0])
+        return structured
     if parsed.hostname == "127.0.0.1" and parsed.port == BRIDGES["pandora"]:
         station = re.fullmatch(r"/stream/([\w-]+)", parsed.path)
         if station:
@@ -237,6 +260,10 @@ def run(args, settings: dict, db: sqlite3.Connection) -> None:
     cache = {}
     genres = {name.strip().casefold() for name in
               settings.get("scrobble_genre_blacklist", "").split(",") if name.strip()}
+    tunein_stations = frozenset(
+        item.strip() for item in settings.get("tunein_artist_title_stations", "").split(",")
+        if re.fullmatch(r"s[0-9]+", item.strip())
+    )
     was_playing = False
     while True:
         try:
@@ -265,7 +292,8 @@ def run(args, settings: dict, db: sqlite3.Connection) -> None:
                 previous = None
             native_scrobble = is_ibroadcast(source[0])
             song = (Song(tags.get("Artist", ""), raw, tags.get("Album", ""))
-                    if native_scrobble else identify(source[0], raw, cache))
+                    if native_scrobble else identify(source[0], raw, cache,
+                                                       tunein_stations, tags.get("Name", "")))
             if song and song.artist and song.title:
                 announcement = (source, normalize(song.artist), normalize(song.title),
                                 song.provider_id)

@@ -162,6 +162,43 @@ def identify(uri: str, raw: str, cache: dict) -> Song | None:
     return None
 
 
+def lastfm_request(song: Song, settings: dict, method: str, **extra) -> dict:
+    """Send a signed Last.fm request without exposing the session credentials."""
+    fields = {
+        "method": method, "api_key": settings["api_key"],
+        "sk": settings["session_key"], "artist": song.artist,
+        "track": song.title, **extra,
+    }
+    if song.album:
+        fields["album"] = song.album
+    signature = "".join(key + value for key, value in sorted(fields.items()))
+    fields["api_sig"] = hashlib.md5(
+        (signature + settings["secret"]).encode()
+    ).hexdigest()
+    fields["format"] = "json"
+    return json_request(LASTFM, urlencode(fields).encode())
+
+
+def now_playing(song: Song, settings: dict) -> None:
+    """Report the current song once, without writing listening history."""
+    try:
+        result = lastfm_request(song, settings, "track.updateNowPlaying")
+        status = result.get("nowplaying", {}).get("ignoredMessage", {})
+        if str(status.get("code")) == "0":
+            logging.info("Last.fm accepted Now Playing")
+        else:
+            logging.warning("Last.fm did not accept Now Playing")
+    except (OSError, ValueError):
+        logging.warning("Last.fm Now Playing response unavailable")
+
+
+def is_ibroadcast(uri: str) -> bool:
+    """Recognize tracks queued by the local iBroadcast bridge."""
+    url = urlsplit(uri)
+    return (url.scheme == "http" and url.hostname == "127.0.0.1"
+            and url.port == 18769 and bool(re.fullmatch(r"/stream/\d+", url.path)))
+
+
 def submit(entry: Listening, settings: dict, db: sqlite3.Connection) -> None:
     """Record the attempt before sending so an uncertain reply cannot duplicate it."""
     song = entry.song
@@ -177,21 +214,9 @@ def submit(entry: Listening, settings: dict, db: sqlite3.Connection) -> None:
             return
         db.execute("INSERT INTO attempts VALUES (?, ?, ?)", (source, identity, now))
         db.execute("DELETE FROM attempts WHERE sent_at<?", (now - 86400,))
-    fields = {
-        "method": "track.scrobble", "api_key": settings["api_key"],
-        "sk": settings["session_key"], "artist": song.artist,
-        "track": song.title, "timestamp": str(entry.started),
-        "chosenByUser": "0",
-    }
-    if song.album:
-        fields["album"] = song.album
-    signature = "".join(key + value for key, value in sorted(fields.items()))
-    fields["api_sig"] = hashlib.md5(
-        (signature + settings["secret"]).encode()
-    ).hexdigest()
-    fields["format"] = "json"
     try:
-        result = json_request(LASTFM, urlencode(fields).encode())
+        result = lastfm_request(song, settings, "track.scrobble",
+                                timestamp=str(entry.started), chosenByUser="0")
         status = result.get("scrobbles", {}).get("@attr", {})
         if str(status.get("accepted")) == "1":
             logging.info("Last.fm accepted a radio scrobble")
@@ -204,6 +229,7 @@ def submit(entry: Listening, settings: dict, db: sqlite3.Connection) -> None:
 def run(args, settings: dict, db: sqlite3.Connection) -> None:
     """Follow MPD playback and submit each eligible radio song once."""
     previous = None
+    last_announced = None
     last_sample = time.monotonic()
     cache = {}
     genres = {name.strip().casefold() for name in
@@ -220,6 +246,8 @@ def run(args, settings: dict, db: sqlite3.Connection) -> None:
             playing = (status.get("state") == "play" and bool(raw)
                        and tags.get("Genre", "").casefold() not in genres)
             if not playing:
+                if status.get("state") == "stop":
+                    last_announced = None
                 if previous:
                     if status.get("state") == "pause" and previous.source == source:
                         previous.observed_boundary = False
@@ -232,8 +260,21 @@ def run(args, settings: dict, db: sqlite3.Connection) -> None:
             was_playing = True
             if previous and previous.source != source:
                 previous = None
-            song = identify(source[0], raw, cache)
-            if not song or not song.artist or not song.title:
+            native_scrobble = is_ibroadcast(source[0])
+            song = (Song(tags.get("Artist", ""), raw, tags.get("Album", ""))
+                    if native_scrobble else identify(source[0], raw, cache))
+            if song and song.artist and song.title:
+                announcement = (source, normalize(song.artist), normalize(song.title),
+                                song.provider_id)
+                if announcement != last_announced:
+                    last_announced = announcement
+                    if args.dry_run:
+                        logging.info("Eligible for Last.fm Now Playing")
+                    else:
+                        now_playing(song, settings)
+            elif last_announced and last_announced[0] != source:
+                last_announced = None
+            if native_scrobble or not song or not song.artist or not song.title:
                 previous = None
             else:
                 same = previous and (

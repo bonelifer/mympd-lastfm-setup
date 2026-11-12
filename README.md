@@ -35,8 +35,9 @@ Play a song to check: Last.fm shows it as "now playing" right away and scrobbles
 `radio-scrobble.py` is an optional companion for continuous streams.
 It recognizes Pandora tracks through the Pandora bridge, matches SomaFM
 songs to station history, and reads structured song metadata where
-iHeartRadio or TuneIn supplies it. iBroadcast and local tracks continue
-to use the normal myMPD Last.fm script.
+iHeartRadio or TuneIn supplies it. The companion sends Last.fm Now Playing for those recognized songs and
+for iBroadcast. The normal myMPD Last.fm script still handles completed
+iBroadcast and local scrobbles, and Now Playing for local tracks.
 
 Try it without sending scrobbles:
 

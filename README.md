@@ -30,6 +30,19 @@ myMPD scrobbles to Last.fm through the `lastfm` script from [mympd-scripts](http
 
 Play a song to check: Last.fm shows it as "now playing" right away and scrobbles it after half its length, or 4 minutes.
 
+## Last.fm profile tile
+
+Add a Home tile that opens a Last.fm profile in a new tab:
+
+```sh
+python3 install-lastfm-tile.py --username YOUR_USERNAME \
+  --mympd http://127.0.0.1:8081 --workdir /path/to/mympd/workdir
+```
+
+Run it again to update the same tile. Set `MYMPD_SESSION` if myMPD
+requires a session. The icon is from [SuperTinyIcons](assets/README.md)
+and is bundled with its MIT notice.
+
 ## Radio scrobbling
 
 `radio-scrobble.py` is an optional companion for continuous streams.

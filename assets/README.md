@@ -1,0 +1,1 @@
+The Last.fm SVG is from [SuperTinyIcons](https://github.com/edent/SuperTinyIcons/blob/master/images/svg/lastfm.svg), copyright Terence Eden, under the [MIT license](LICENSE-SuperTinyIcons). The PNG is a 128 × 128 raster export of that SVG.

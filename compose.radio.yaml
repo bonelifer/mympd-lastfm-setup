@@ -1,0 +1,21 @@
+services:
+  radio-scrobbler:
+    build:
+      context: .
+      dockerfile: radio-docker/Dockerfile
+    network_mode: host
+    user: "${RADIO_UID:-1000}:${RADIO_GID:-1000}"
+    restart: unless-stopped
+    command: ["--config", "/config/setup-lastfm.cfg", "--state", "/state/attempts.sqlite3"]
+    volumes:
+      - type: bind
+        source: ${RADIO_LASTFM_CONFIG:?Set RADIO_LASTFM_CONFIG}
+        target: /config/setup-lastfm.cfg
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./data
+        target: /state
+        bind:
+          create_host_path: false

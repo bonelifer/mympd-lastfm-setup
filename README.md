@@ -30,6 +30,53 @@ myMPD scrobbles to Last.fm through the `lastfm` script from [mympd-scripts](http
 
 Play a song to check: Last.fm shows it as "now playing" right away and scrobbles it after half its length, or 4 minutes.
 
+## Radio scrobbling
+
+`radio-scrobble.py` is an optional companion for continuous streams.
+It recognizes Pandora tracks through the Pandora bridge, matches SomaFM
+songs to station history, and reads structured song metadata where
+iHeartRadio or TuneIn supplies it. iBroadcast and local tracks continue
+to use the normal myMPD Last.fm script.
+
+Try it without sending scrobbles:
+
+```sh
+python3 radio-scrobble.py --config /path/to/setup-lastfm.cfg \
+  --state /path/to/radio-scrobbles.sqlite3 --dry-run
+```
+
+Remove `--dry-run` to enable submissions. Keep the state database on a
+local filesystem and run one instance. The default MPD address is
+`127.0.0.1:6600`. Pandora metadata uses the local bridge on port 18765.
+
+For Docker on a Linux host, use host networking so the container can reach
+MPD and the Pandora bridge on loopback:
+
+```sh
+export RADIO_LASTFM_CONFIG=/path/to/setup-lastfm.cfg
+install -d -m 700 data
+export RADIO_UID="$(id -u)" RADIO_GID="$(id -g)"
+docker compose -p mympd-radio-scrobble -f compose.radio.yaml up -d --build
+```
+
+The config is mounted read-only. The duplicate-prevention database is
+stored in `./data/attempts.sqlite3`. The `data` directory must already
+exist and be writable by the selected user. Stop any existing native instance
+before starting the container.
+
+GitHub Actions builds and checks the image on pull requests and publishes
+`latest` and commit SHA tags from `main`. To use the published image,
+replace the `build:` block with
+`image: ghcr.io/bonelifer/mympd-lastfm-setup:latest`.
+
+The companion skips ads, shows, and unidentified tracks. TuneIn stations
+that provide only an unstructured title are skipped. When there is no
+reported duration, the companion waits for four minutes of listening or
+for a complete track observed between two song changes. The state
+database suppresses repeat submissions for the same provider event or,
+when an event ID is unavailable, the same track on the same stream within
+15 minutes.
+
 ## Modes
 
 | Option | What it does |

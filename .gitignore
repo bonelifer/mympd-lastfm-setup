@@ -2,3 +2,6 @@
 setup-lastfm.cfg
 .setup-lastfm.cfg.*
 __pycache__/
+
+# Runtime state for the Docker radio scrobbler.
+/data/

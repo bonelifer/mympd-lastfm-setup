@@ -31,3 +31,7 @@ password =
 # Comma separated genres that should not be scrobbled (case does not
 # matter). Optional; --add-genre and --remove-genre change it.
 scrobble_genre_blacklist = Christmas,Holiday,Holidays,Podcast
+
+# Optional TuneIn station IDs that reliably send plain Artist - Song titles.
+# Leave empty to require structured song metadata on all TuneIn stations.
+tunein_artist_title_stations =

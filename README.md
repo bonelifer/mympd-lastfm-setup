@@ -71,12 +71,44 @@ replace the `build:` block with
 `image: ghcr.io/bonelifer/mympd-lastfm-setup:latest`.
 
 The companion skips ads, shows, and unidentified tracks. TuneIn stations
-that provide only an unstructured title are skipped. When there is no
-reported duration, the companion waits for four minutes of listening or
+that provide only a plain title are skipped unless their IDs are listed
+in `[lastfm] tunein_artist_title_stations`. For example,
+`tunein_artist_title_stations = s33220` enables Rock 101.5. Separate
+multiple IDs with commas. For these plain titles the companion must
+observe both song boundaries and more than 30 seconds of playback before
+scrobbling. Opt in only stations that consistently label music
+`Artist - Song`.
+
+For other feeds with no reported duration, the companion waits for four minutes of listening or
 for a complete track observed between two song changes. The state
 database suppresses repeat submissions for the same provider event or,
 when an event ID is unavailable, the same track on the same stream within
 15 minutes.
+
+## Scan TuneIn favorites
+
+Run this on a host with the `mpd` executable and access to the TuneIn bridge:
+
+```sh
+python3 scan-tunein.py scan --report tunein-scan.json
+```
+
+The scanner uses private MPD instances with silent output. It checks each
+favorite for up to 12 minutes, four at a time, and reports candidates after
+two complete plain-title tracks. Use `--station` to check selected favorites.
+Structured metadata already works without an opt-in.
+
+Review the candidates, then save the IDs you want to scrobble:
+
+```sh
+python3 scan-tunein.py save --report tunein-scan.json \
+  --config /path/to/setup-lastfm.cfg --station STATION_ID
+```
+
+Repeat `--station` to save more than one candidate. Saving only adds to the
+Last.fm allowlist. The TuneIn picker still offers all favorites. Recreate the
+radio scrobbler container after saving so it sees the updated bind-mounted
+config file.
 
 ## Modes
 

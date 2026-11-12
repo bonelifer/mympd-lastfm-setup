@@ -134,8 +134,11 @@ def identify(uri: str, raw: str, cache: dict) -> Song | None:
                     return None
                 raise
             if track.get("songActions") and track.get("title") == raw:
+                duration = track.get("duration")
+                if type(duration) not in (int, float) or not 0 < duration <= 86400:
+                    duration = 0
                 return Song(track.get("artist") or "", track.get("song") or "",
-                            track.get("album") or "", provider_id=track["id"])
+                            track.get("album") or "", duration, track["id"])
     if parsed.hostname and parsed.hostname.endswith(".somafm.com"):
         station = re.fullmatch(
             r"/([a-z0-9-]+?)(?:-\d+(?:-(?:mp3|aacp?|flac))?)?", parsed.path, re.I
